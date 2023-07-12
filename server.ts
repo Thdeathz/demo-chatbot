@@ -2,10 +2,11 @@ import express from 'express'
 import dotenv from 'dotenv'
 import path from 'path'
 import bodyParser from 'body-parser'
+import { verifyRequestSignature } from '~/middleware/verifyRequest'
 import rootRoute from '~/routes/root.route'
 import notFoundRoute from '~/routes/404.route'
 import chatbotRoute from '~/routes/chatbot.route'
-import { verifyRequestSignature } from '~/middleware/verifyRequest'
+import getStartedRoute from '~/routes/getStarted.route'
 
 dotenv.config()
 const app = express()
@@ -24,6 +25,7 @@ app.set('view engine', 'ejs')
 
 /* ROUTES */
 app.use('/', rootRoute)
+app.use('/setup-profile', getStartedRoute)
 app.use('/webhook', chatbotRoute)
 app.use('*', notFoundRoute)
 

@@ -1,4 +1,5 @@
 import { RequestHandler } from 'express'
+import request from 'request'
 
 const vieriFyToken = process.env.VERIFY_TOKEN
 const pageAccessToken = process.env.PAGE_ACCESS_TOKEN
@@ -25,6 +26,14 @@ export const postWebhook: RequestHandler = (req, res) => {
       // Get the sender PSID
       let senderPsid = webhookEvent.sender.id
       console.log(`\u{1F7EA} Sender PSID: `, senderPsid)
+
+      // Check if the event is a message or postback and
+      // pass the event to the appropriate handler function
+      if (webhookEvent.message) {
+        handleMessage(senderPsid, webhookEvent.message)
+      } else if (webhookEvent.postback) {
+        // handlePostback(senderPsid, webhookEvent.postback)
+      }
     })
   } else {
     // Return a '404 Not Found' if event is not from a page subscription
@@ -50,4 +59,103 @@ export const getWebhook: RequestHandler = (req, res) => {
       res.sendStatus(403)
     }
   }
+}
+
+export const setUpProfile: RequestHandler = (req, res) => {
+  // Construct the message body
+  let requestBody = {
+    get_started: {
+      payload: 'GET_STARTED'
+    },
+    whitelisted_domains: [process.env.APP_DOMAIN]
+  }
+
+  // Send the HTTP request to the Messenger Platform
+  request(
+    {
+      uri: `https://graph.facebook.com/v14.0/me/messenger_profile?access_token=${pageAccessToken}`,
+      qs: { access_token: pageAccessToken },
+      method: 'POST',
+      json: requestBody
+    },
+    (err, res, body) => {
+      if (!err) {
+        console.log('Gửi gì đó đuê ><!')
+      } else {
+        console.error('Unable to set up profile:' + err)
+      }
+    }
+  )
+}
+
+const handleMessage = (senderPsid: string, receivedMessage: any) => {
+  let response
+
+  // Check if the message contains text
+  if (receivedMessage.text) {
+    // Create the payload for a basic text message
+    response = {
+      text: `Nhận được rồi nhá: \n'${receivedMessage.text}'.\n Gửi thử cái ảnh xem bro ><!`
+    }
+  } else if (receivedMessage.attachments) {
+    // Gets the URL of the message attachment
+    let attachmentUrl = receivedMessage.attachments[0].payload.url
+    response = {
+      attachment: {
+        type: 'template',
+        payload: {
+          template_type: 'generic',
+          elements: [
+            {
+              title: 'Vừa gửi ảnh này đúng không :))?',
+              subtitle: 'Đúng hay sai.',
+              image_url: attachmentUrl,
+              buttons: [
+                {
+                  type: 'postback',
+                  title: 'Chuẩn luôn!',
+                  payload: 'yes'
+                },
+                {
+                  type: 'postback',
+                  title: 'Sai rồi ><!',
+                  payload: 'no'
+                }
+              ]
+            }
+          ]
+        }
+      }
+    }
+  }
+
+  // Sends the response message
+  callSendAPI(senderPsid, response)
+}
+
+const callSendAPI = (senderPsid: string, response: any) => {
+  // Construct the message body
+  let requestBody = {
+    recipient: {
+      id: senderPsid
+    },
+    message: response
+  }
+
+  // Send the HTTP request to the Messenger Platform
+  request(
+    {
+      uri: 'https://graph.facebook.com/v14.0/me/messages',
+      qs: { access_token: pageAccessToken },
+      method: 'POST',
+      json: requestBody
+    },
+    (err, res, body) => {
+      if (!err) {
+        console.log('Message sent!')
+      } else {
+        console.error('Unable to send message:' + err)
+      }
+    }
+  )
 }
