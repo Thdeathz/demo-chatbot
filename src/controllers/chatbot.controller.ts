@@ -1,5 +1,8 @@
 import { RequestHandler } from 'express'
 
+const vieriFyToken = process.env.VERIFY_TOKEN
+const pageAccessToken = process.env.PAGE_ACCESS_TOKEN
+
 export const postWebhook: RequestHandler = (req, res) => {
   let body = req.body
 
@@ -11,6 +14,18 @@ export const postWebhook: RequestHandler = (req, res) => {
   if (body.object === 'page') {
     // Returns a '200 OK' response to all requests
     res.status(200).send('EVENT_RECEIVED')
+
+    // Iterate over each entry - there may be multiple if batched
+    body.entry.forEach(function (entry: any) {
+      // Gets the body of the webhook event
+      let webhookEvent = entry.messaging[0]
+      console.log(`\u{1F7EA} Received webhook event:`)
+      console.dir(webhookEvent, { depth: null })
+
+      // Get the sender PSID
+      let senderPsid = webhookEvent.sender.id
+      console.log(`\u{1F7EA} Sender PSID: `, senderPsid)
+    })
   } else {
     // Return a '404 Not Found' if event is not from a page subscription
     res.sendStatus(404)
@@ -26,7 +41,7 @@ export const getWebhook: RequestHandler = (req, res) => {
   // Check if a token and mode is in the query string of the request
   if (mode && token) {
     // Check the mode and token sent is correct
-    if (mode === 'subscribe' && token === process.env.VERIFY_TOKEN) {
+    if (mode === 'subscribe' && token === vieriFyToken) {
       // Respond with the challenge token from the request
       console.log('WEBHOOK_VERIFIED')
       res.status(200).send(challenge)
