@@ -1,7 +1,8 @@
 import { RequestHandler } from 'express'
 import request from 'request'
+import { handleMessage } from '~/utils/Chatbot'
 
-const vieriFyToken = process.env.VERIFY_TOKEN
+const verifyToken = process.env.VERIFY_TOKEN
 const pageAccessToken = process.env.PAGE_ACCESS_TOKEN
 
 export const postWebhook: RequestHandler = (req, res) => {
@@ -50,7 +51,7 @@ export const getWebhook: RequestHandler = (req, res) => {
   // Check if a token and mode is in the query string of the request
   if (mode && token) {
     // Check the mode and token sent is correct
-    if (mode === 'subscribe' && token === vieriFyToken) {
+    if (mode === 'subscribe' && token === verifyToken) {
       // Respond with the challenge token from the request
       console.log('WEBHOOK_VERIFIED')
       res.status(200).send(challenge)
@@ -83,78 +84,6 @@ export const setUpProfile: RequestHandler = (req, res) => {
         console.log('Gửi gì đó đuê ><!')
       } else {
         console.error('Unable to set up profile:' + err)
-      }
-    }
-  )
-}
-
-const handleMessage = (senderPsid: string, receivedMessage: any) => {
-  let response
-
-  // Check if the message contains text
-  if (receivedMessage.text) {
-    // Create the payload for a basic text message
-    response = {
-      text: `Nhận được rồi nhá: \n'${receivedMessage.text}'.\n Gửi thử cái ảnh xem bro ><!`
-    }
-  } else if (receivedMessage.attachments) {
-    // Gets the URL of the message attachment
-    let attachmentUrl = receivedMessage.attachments[0].payload.url
-    response = {
-      attachment: {
-        type: 'template',
-        payload: {
-          template_type: 'generic',
-          elements: [
-            {
-              title: 'Vừa gửi ảnh này đúng không :))?',
-              subtitle: 'Đúng hay sai.',
-              image_url: attachmentUrl,
-              buttons: [
-                {
-                  type: 'postback',
-                  title: 'Chuẩn luôn!',
-                  payload: 'yes'
-                },
-                {
-                  type: 'postback',
-                  title: 'Sai rồi ><!',
-                  payload: 'no'
-                }
-              ]
-            }
-          ]
-        }
-      }
-    }
-  }
-
-  // Sends the response message
-  callSendAPI(senderPsid, response)
-}
-
-const callSendAPI = (senderPsid: string, response: any) => {
-  // Construct the message body
-  let requestBody = {
-    recipient: {
-      id: senderPsid
-    },
-    message: response
-  }
-
-  // Send the HTTP request to the Messenger Platform
-  request(
-    {
-      uri: 'https://graph.facebook.com/v14.0/me/messages',
-      qs: { access_token: pageAccessToken },
-      method: 'POST',
-      json: requestBody
-    },
-    (err, res, body) => {
-      if (!err) {
-        console.log('Message sent!')
-      } else {
-        console.error('Unable to send message:' + err)
       }
     }
   )
